@@ -1,0 +1,12 @@
+__pycache__
+*.log
+*.out
+backup
+checkpoints/*
+config/*
+*sample*
+*.pt
+*.csv
+*.pth 
+*.npy
+exp/
