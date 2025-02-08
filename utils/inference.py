@@ -29,25 +29,20 @@ def generation_from_net(diffused_model, net, batch_size, device, text_embed, con
                                      sample=xi)['prev_sample']
     return xi 
 
-def batch_generate_ECG(settings, 
-                       unet, 
+def batch_generate_ECG(unet, 
                        diffused_model, 
                        decoder, 
                        condition):
 
-    save_path = settings['save_path']
+    save_path = "./test_sample_all"
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    save_img = settings['save_img']
-    if not save_img:
-        print("Ignore image drawing and saving...")
-
-    text = settings['text']
-    gender = settings['gender']
-    age = settings['age']
-    hr = settings['hr']
-    batch = settings['gen_batch']
+    text = condition['text']
+    sex = condition['sex']
+    age = condition['age']
+    hr = condition['hr']
+    batch = 4
 
     features_file_content = {}
 
@@ -59,48 +54,45 @@ def batch_generate_ECG(settings,
     text_embed = np.repeat(text_embed[np.newaxis, :, :], batch, axis=0)
 
     text_embed = torch.Tensor(text_embed)
-    device = torch.device(settings['device'] if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     text_embed = text_embed.to(device)
     
-    verbose = settings['verbose']
+    verbose = False
     if verbose:
         print(text_embed.shape)
 
     features_file_content.update({"batch": batch}) 
     features_file_content.update({"Diagnosis": text}) 
 
-    condition_dict = None
-    if condition:
-        condition_dict = {'gender': gender, 'age': age, 'heart rate': hr}
-        for key in condition_dict:
-            features_file_content.update({key: condition_dict[key]}) 
-        condition_dict['gender'] = 1 if gender == 'M' else 0
+    condition_dict = {'sex': sex, 'age': age, 'heart rate': hr}
+    for key in condition_dict:
+        features_file_content.update({key: condition_dict[key]}) 
+    condition_dict['sex'] = 1 if sex == 'M' else 0
 
-        for key in condition_dict:
-            condition_dict[key] = np.array([condition_dict[key]])
-            condition_dict[key] = np.repeat(condition_dict[key][np.newaxis, :], 1, axis=0)
-            condition_dict[key] = np.repeat(condition_dict[key][np.newaxis, :], batch, axis=0)
-            if verbose:
-                print(condition_dict[key].shape)
-            condition_dict[key] = torch.Tensor(condition_dict[key])
-            condition_dict[key] = condition_dict[key].to(device)
+    for key in condition_dict:
+        condition_dict[key] = np.array([condition_dict[key]])
+        condition_dict[key] = np.repeat(condition_dict[key][np.newaxis, :], 1, axis=0)
+        condition_dict[key] = np.repeat(condition_dict[key][np.newaxis, :], batch, axis=0)
         if verbose:
-            print(condition_dict)
+            print(condition_dict[key].shape)
+        condition_dict[key] = torch.Tensor(condition_dict[key])
+        condition_dict[key] = condition_dict[key].to(device)
+    if verbose:
+        print(condition_dict)
 
     unet.to(device) 
     decoder.to(device)
     latent = generation_from_net(diffused_model, unet, batch_size=batch, device=device, text_embed=text_embed, condition=condition_dict)
     
 
-    if save_img:
-        gen_ecg = decoder(torch.Tensor(latent))
-        for j in range(batch):
-            output = gen_ecg[j]
+    gen_ecg = decoder(torch.Tensor(latent))
+    for j in range(batch):
+        output = gen_ecg[j]
 
-            output_ = output.squeeze(0).detach().cpu().numpy()
-            plot(output_.transpose(1, 0), sample_rate = 102.4, title = None, columns = 1, row_height = 3)
-            plt.savefig(os.path.join(save_path , f'{j} Generated ECG.png'))
-            plt.close()
+        output_ = output.squeeze(0).detach().cpu().numpy()
+        plot(output_.transpose(1, 0), sample_rate = 102.4, title = None, columns = 1, row_height = 3)
+        plt.savefig(os.path.join(save_path , f'{j} Generated ECG.png'))
+        plt.close()
 
     with open(os.path.join(save_path , 'features.json'), 'w') as json_file:
         json.dump(features_file_content, json_file, indent=4)
