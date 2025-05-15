@@ -2,6 +2,8 @@
 
 A **Web Demo** of paper [**_DiffuSETS: 12-lead ECG Generation Conditioned on Clinical Text Reports and Patient-Specific Information_**](http://arxiv.org/abs/2501.05932)
 
+For **experiment details**, please refer to [original repo](https://github.com/Raiiyf/DiffuSETS_Exp).
+
 **Prerequisities** can be found at [Our Huggingface🤗 Hub](https://huggingface.co/Laiyf/DiffuSETS_KT). Put them under the root of this repo as `./prerequisites/`.
 
 **Usage**
